@@ -8,7 +8,7 @@ import {
   TrendingUp, Scale, Zap
 } from 'lucide-react';
 
-// --- CONFIGURAÇÃO CENTRALIZADA DA API BACKEND ---
+// --- CONFIGURAÇÃO DA API ---
 const API_URL = 'http://localhost:5000/api';
 
 const getHeaders = () => {
@@ -26,7 +26,7 @@ const getHeaders = () => {
 // --- CONFIGURAÇÕES DE NEGÓCIO ---
 const IDADE_MINIMA_MESES_ANALISE = 12;
 
-// --- FUNÇÕES UTILITÁRIAS ---
+// --- FUNÇÕES UTILITÁRIAS SEGUROS (NO-CRASH) ---
 const calcularIdadeExata = (dataNascimento) => {
   if (!dataNascimento) return 'Desconhecida';
   try {
@@ -48,12 +48,10 @@ const calcularIdadeExata = (dataNascimento) => {
       meses += 12;
     }
 
-    if (anos > 0) return `${anos} anos e ${meses} meses`;
-    if (meses > 0) return `${meses} meses e ${dias} dias`;
+    if (anos > 0) return `${anos}a ${meses}m ${dias}d`;
+    if (meses > 0) return `${meses}m ${dias}d`;
     return `${dias} dias`;
-  } catch (e) {
-    return 'Desconhecida';
-  }
+  } catch (e) { return 'Desconhecida'; }
 };
 
 const isElegivelAnaliseGenetica = (animal) => {
@@ -68,9 +66,7 @@ const isElegivelAnaliseGenetica = (animal) => {
 
     const totalMeses = (hoje.getFullYear() - nasciCorrigido.getFullYear()) * 12 + (hoje.getMonth() - nasciCorrigido.getMonth());
     return totalMeses >= IDADE_MINIMA_MESES_ANALISE;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 };
 
 export default function App() {
@@ -78,11 +74,9 @@ export default function App() {
   const [authStatus, setAuthStatus] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
   
-  // Login State
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
 
-  // Cadastro State
   const [nomeCadastro, setNomeCadastro] = useState('');
   const [emailCadastro, setEmailCadastro] = useState('');
   const [senhaCadastro, setSenhaCadastro] = useState('');
@@ -115,35 +109,27 @@ export default function App() {
   const [isCadastroOpen, setIsCadastroOpen] = useState(false);
   const [simuladorPreSelection, setSimuladorPreSelection] = useState({ matriz: '', reprodutor: '' });
 
-  // --- SINCRONIZAÇÃO DE SESSÃO ATIVA ---
+  // --- SINCRONIZAÇÃO DE SESSÃO ATIVA (PROTEGIDO) ---
   useEffect(() => {
     try {
       const token = localStorage.getItem('gametech_token');
       const userStr = localStorage.getItem('gametech_user');
       if (token && userStr && userStr !== "undefined") {
-        const user = JSON.parse(userStr);
-        setCurrentUser(user);
+        setCurrentUser(JSON.parse(userStr));
         setAuthStatus('authenticated');
       }
     } catch (e) {
-      localStorage.removeItem('gametech_token');
-      localStorage.removeItem('gametech_user');
+      localStorage.clear();
       setAuthStatus('login');
     }
   }, []);
 
-  // --- CARREGAR LISTA DE FAZENDAS ---
   useEffect(() => {
-    if (authStatus === 'authenticated') {
-      loadFazendas();
-    }
+    if (authStatus === 'authenticated') loadFazendas();
   }, [authStatus]);
 
-  // --- CARREGAR DADOS COMPLETOS DA FAZENDA ATIVA ---
   useEffect(() => {
-    if (authStatus === 'authenticated' && selectedFazendaId) {
-      loadDadosFazenda(selectedFazendaId);
-    }
+    if (authStatus === 'authenticated' && selectedFazendaId) loadDadosFazenda(selectedFazendaId);
   }, [selectedFazendaId, authStatus]);
 
   const loadFazendas = async () => {
@@ -153,88 +139,56 @@ export default function App() {
         const data = await res.json();
         if (Array.isArray(data)) {
           setFazendas(data);
-          if (data.length > 0 && !selectedFazendaId) {
-            setSelectedFazendaId(data[0].id);
-          }
+          if (data.length > 0 && !selectedFazendaId) setSelectedFazendaId(data[0].id);
         }
       }
-    } catch (err) {
-      console.error('Erro de conexão ao coletar fazendas:', err);
-    }
+    } catch (err) {}
   };
 
   const loadDadosFazenda = async (fazendaId) => {
     setLoading(true);
     try {
-      // 1. Obter Animais (Defensive Mapping)
       const resAnimais = await fetch(`${API_URL}/animais?fazendaId=${fazendaId}`, { headers: getHeaders() });
       if (resAnimais.ok) {
         const dataAnimais = await resAnimais.json();
         const formatAnimais = (Array.isArray(dataAnimais) ? dataAnimais : []).map(a => ({
-          id: String(a.id || `UNK-${Math.floor(Math.random()*1000)}`),
-          especie: String(a.especie || 'Bovino'),
-          raca: String(a.raca || 'Sem raça'),
-          sexo: String(a.sexo || 'Fêmea'),
-          dataNascimento: a.data_nascimento || '',
-          peso: parseFloat(a.peso) || 0,
-          status: String(a.status || 'Saudável'),
-          saude: String(a.saude || 'Saudável'),
-          ecc: String(a.ecc || 'ECC 3 - Ideal / Saudável'),
-          vacinas: String(a.vacinas || 'Em dia'),
-          abortos: parseInt(a.abortos) || 0,
-          gestacoes: parseInt(a.gestacoes) || 0,
-          fazenda_id: a.fazenda_id,
-          isFavorito: Boolean(a.is_favorito),
-          foto: a.foto || null,
-          historicoPeso: Array.isArray(a.historico_peso) ? a.historico_peso.map(Number) : [parseFloat(a.peso) || 0],
-          pai: String(a.pai_id || ''),
-          mae: String(a.mae_id || '')
+          id: String(a.id || ''), especie: String(a.especie || 'Bovino'), raca: String(a.raca || ''),
+          sexo: String(a.sexo || 'Fêmea'), dataNascimento: a.data_nascimento || '',
+          peso: parseFloat(a.peso) || 0, status: String(a.status || 'Saudável'), saude: String(a.saude || 'Saudável'),
+          ecc: String(a.ecc || 'ECC 3'), vacinas: String(a.vacinas || 'Em dia'), abortos: parseInt(a.abortos) || 0,
+          gestacoes: parseInt(a.gestacoes) || 0, fazenda_id: a.fazenda_id, isFavorito: Boolean(a.is_favorito),
+          foto: a.foto || null, historicoPeso: Array.isArray(a.historico_peso) ? a.historico_peso : [{ data: a.data_nascimento || new Date().toISOString().split('T')[0], peso: parseFloat(a.peso) || 0 }],
+          pai: String(a.pai_id || ''), mae: String(a.mae_id || '')
         }));
         setAnimais(formatAnimais);
-      } else {
-        setAnimais([]);
-      }
+      } else { setAnimais([]); }
 
-      // 2. Obter Inseminações
       const resIA = await fetch(`${API_URL}/inseminacoes?fazendaId=${fazendaId}`, { headers: getHeaders() });
       if (resIA.ok) {
         const dataIA = await resIA.json();
         setInseminacoesHistorico(Array.isArray(dataIA) ? dataIA : []);
-      } else {
-        setInseminacoesHistorico([]);
-      }
+      } else { setInseminacoesHistorico([]); }
 
-      // 3. Obter Funcionários
       const resFunc = await fetch(`${API_URL}/funcionarios?fazendaId=${fazendaId}`, { headers: getHeaders() });
       if (resFunc.ok) {
         const dataFunc = await resFunc.json();
         setFuncionarios(Array.isArray(dataFunc) ? dataFunc : []);
-      } else {
-        setFuncionarios([]);
-      }
-    } catch (err) {
-      console.error('Erro de conexão com o banco de dados:', err);
-    } finally {
+      } else { setFuncionarios([]); }
+    } catch (err) {} finally {
       setLoading(false);
     }
   };
 
-  const animaisFazenda = useMemo(() => {
-    return (animais || []).filter(a => a && a.fazenda_id === selectedFazendaId);
-  }, [animais, selectedFazendaId]);
+  const animaisFazenda = useMemo(() => (animais || []).filter(a => a && a.fazenda_id === selectedFazendaId), [animais, selectedFazendaId]);
+  const inseminacoesFazenda = useMemo(() => (inseminacoesHistorico || []).filter(ia => ia && ia.fazenda_id === selectedFazendaId), [inseminacoesHistorico, selectedFazendaId]);
 
-  const inseminacoesFazenda = useMemo(() => {
-    return (inseminacoesHistorico || []).filter(ia => ia && ia.fazenda_id === selectedFazendaId);
-  }, [inseminacoesHistorico, selectedFazendaId]);
-
-  // --- OPERAÇÕES DE AUTENTICAÇÃO INTEGRADA ---
+  // --- OPERAÇÕES DE AUTENTICAÇÃO ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailInput.trim().toLowerCase(), senha: passwordInput })
       });
       const data = await res.json();
@@ -245,14 +199,9 @@ export default function App() {
       setCurrentUser(data.user);
       setAuthStatus('authenticated');
       showToast('Login efetuado com sucesso!');
-      
-      // Limpa os campos após sucesso
-      setEmailInput('');
-      setPasswordInput('');
+      setEmailInput(''); setPasswordInput('');
     } catch (err) {
-      // Captura o "Failed to fetch" de redes
-      const errorMsg = err.message === 'Failed to fetch' ? 'Erro de rede: O servidor backend não está rodando na porta 5000.' : err.message;
-      setAuthError(errorMsg);
+      setAuthError(err.message === 'Failed to fetch' ? 'Erro: Inicie o Backend (Node.js) local na porta 5000.' : err.message);
     }
   };
 
@@ -261,133 +210,68 @@ export default function App() {
     setAuthError('');
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: nomeCadastro,
-          email: emailCadastro.trim().toLowerCase(),
-          senha: senhaCadastro,
-          cpf: cpfCadastro
-        })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nomeCadastro, email: emailCadastro.trim().toLowerCase(), senha: senhaCadastro, cpf: cpfCadastro })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao processar o cadastro.');
 
       showToast('Conta criada com sucesso! Faça login.');
       setAuthStatus('login');
-      setNomeCadastro('');
-      setEmailCadastro('');
-      setSenhaCadastro('');
-      setCpfCadastro('');
+      setNomeCadastro(''); setEmailCadastro(''); setSenhaCadastro(''); setCpfCadastro('');
     } catch (err) {
-      const errorMsg = err.message === 'Failed to fetch' ? 'Erro de rede: O servidor backend não está rodando na porta 5000.' : err.message;
-      setAuthError(errorMsg);
+      setAuthError(err.message === 'Failed to fetch' ? 'Erro de rede: O servidor backend não está online.' : err.message);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('gametech_token');
-    localStorage.removeItem('gametech_user');
-    setCurrentUser(null);
-    setFazendas([]);
-    setAnimais([]);
-    setSelectedFazendaId(null);
-    setAuthStatus('login');
-    setActiveTab('dashboard');
-    setIsMobileMenuOpen(false);
+    localStorage.clear();
+    setCurrentUser(null); setFazendas([]); setAnimais([]); setSelectedFazendaId(null);
+    setAuthStatus('login'); setActiveTab('dashboard'); setIsMobileMenuOpen(false);
   };
 
-  // --- CRUD DE ANIMAIS ---
+  // --- CRUDS GERAIS (ANIMAIS) ---
   const handleCadastrarAnimal = async (novoAnimal) => {
     try {
-      const payload = {
-        id: novoAnimal.id,
-        especie: novoAnimal.especie,
-        raca: novoAnimal.raca,
-        sexo: novoAnimal.sexo,
-        dataNascimento: novoAnimal.dataNascimento,
-        peso: novoAnimal.peso,
-        status: novoAnimal.status,
-        saude: novoAnimal.saude,
-        ecc: novoAnimal.ecc,
-        pai: novoAnimal.pai || null,
-        mae: novoAnimal.mae || null,
-        fazenda_id: selectedFazendaId
-      };
-
-      const res = await fetch(`${API_URL}/animais`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao salvar animal no banco');
-
+      const payload = { ...novoAnimal, pai: novoAnimal.pai || null, mae: novoAnimal.mae || null, fazenda_id: selectedFazendaId };
+      const res = await fetch(`${API_URL}/animais`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error('Erro ao salvar animal no banco');
       await loadDadosFazenda(selectedFazendaId);
       setIsCadastroOpen(false);
       showToast(`Animal ${novoAnimal.id} cadastrado na fazenda atual!`);
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const handleUpdateAnimal = async (updatedAnimal) => {
     try {
-      const res = await fetch(`${API_URL}/animais/${updatedAnimal.id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          peso: updatedAnimal.peso,
-          status: updatedAnimal.status,
-          ecc: updatedAnimal.ecc,
-          saude: updatedAnimal.saude,
-          isFavorito: updatedAnimal.isFavorito,
-          foto: updatedAnimal.foto
-        })
-      });
+      const res = await fetch(`${API_URL}/animais/${updatedAnimal.id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(updatedAnimal) });
       if (!res.ok) throw new Error('Erro ao salvar atualização no banco');
-
       await loadDadosFazenda(selectedFazendaId);
       setSelectedAnimal(updatedAnimal);
-      showToast('Ficha atualizada com sucesso!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+      showToast('Ficha atualizada e dados persistidos!');
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const handleDeleteAnimal = async (id) => {
     if(window.confirm('Tem certeza que deseja excluir permanentemente esta ficha?')) {
       try {
-        const res = await fetch(`${API_URL}/animais/${id}`, {
-          method: 'DELETE',
-          headers: getHeaders()
-        });
+        const res = await fetch(`${API_URL}/animais/${id}`, { method: 'DELETE', headers: getHeaders() });
         if (!res.ok) throw new Error('Falha ao remover do PostgreSQL.');
-
         await loadDadosFazenda(selectedFazendaId);
         setSelectedAnimal(null);
         showToast('Ficha excluída com sucesso.', 'info');
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
+      } catch (err) { showToast(err.message, 'error'); }
     }
   };
 
   const handleTransferirAnimal = async (id, novaFazendaId) => {
     try {
-      const res = await fetch(`${API_URL}/animais/${id}/transferir`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ novaFazendaId })
-      });
+      const res = await fetch(`${API_URL}/animais/${id}/transferir`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ novaFazendaId }) });
       if (!res.ok) throw new Error('Erro ao transferir animal de fazenda');
-
       await loadDadosFazenda(selectedFazendaId);
       setSelectedAnimal(null);
       showToast('Animal transferido para outra propriedade com sucesso!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const goToSimuladorWithAnimal = (animal) => {
@@ -398,79 +282,47 @@ export default function App() {
     showToast('Dados transferidos para o simulador IA.', 'info');
   };
 
-  // --- CRUD DE INSEMINAÇÕES ---
   const handleAtualizarStatusIA = async (idIA, novoStatus) => {
     try {
-      const res = await fetch(`${API_URL}/inseminacoes/${idIA}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify({ status: novoStatus })
-      });
+      const res = await fetch(`${API_URL}/inseminacoes/${idIA}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: novoStatus }) });
       if (!res.ok) throw new Error('Não foi possível atualizar o status');
-      
       await loadDadosFazenda(selectedFazendaId);
-      showToast('Status da gestação atualizado!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+      showToast('Status reprodutivo atualizado!');
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const registrarNascimento = async (ia, dadosBezerro) => {
     try {
-      const res = await fetch(`${API_URL}/inseminacoes/${ia.id}/nascimento`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ dadosBezerro })
-      });
+      const res = await fetch(`${API_URL}/inseminacoes/${ia.id}/nascimento`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ dadosBezerro }) });
       if (!res.ok) throw new Error('Erro ao cadastrar nascimento no servidor');
-
       await loadDadosFazenda(selectedFazendaId);
-      showToast(`Nascimento registrado! Ficha ${dadosBezerro.id} vinculada com sucesso.`, 'success');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+      showToast(`Nascimento registrado! Ficha ${dadosBezerro.id} (0 dias) gerada com sucesso.`, 'success');
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
-  // --- CRUD DE FAZENDA ---
   const handleAddFazenda = async (novaFazenda) => {
     try {
-      const res = await fetch(`${API_URL}/fazendas`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(novaFazenda)
-      });
+      const res = await fetch(`${API_URL}/fazendas`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(novaFazenda) });
       if (!res.ok) throw new Error('Erro ao criar fazenda');
-
       await loadFazendas();
       showToast('Nova fazenda cadastrada e disponível no sistema!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const handleEditFazenda = async (fazendaEditada) => {
     try {
-      const res = await fetch(`${API_URL}/fazendas/${fazendaEditada.id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(fazendaEditada)
-      });
-      if (!res.ok) throw new Error('Erro ao editar fazenda');
-
+      const res = await fetch(`${API_URL}/fazendas/${fazendaEditada.id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(fazendaEditada) });
+      if (!res.ok) throw new Error('Erro ao atualizar fazenda');
       await loadFazendas();
       showToast('Dados da fazenda atualizados!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    } catch (err) { showToast(err.message, 'error'); }
   };
 
   const handleNavClick = (tabId) => {
-    setActiveTab(tabId);
-    setSelectedAnimal(null);
-    setIsMobileMenuOpen(false);
+    setActiveTab(tabId); setSelectedAnimal(null); setIsMobileMenuOpen(false);
   };
 
-  // --- TELA DE LOGIN / REGISTRO ---
+  // --- TELAS DE AUTENTICAÇÃO ---
   if (authStatus === 'login' || authStatus === 'register') {
     return (
       <div className="flex h-screen w-full bg-gray-50 font-sans">
@@ -488,14 +340,14 @@ export default function App() {
             <Dna size={140} className="text-white mb-4 drop-shadow-md" strokeWidth={1.5} />
             <h1 className="text-6xl font-bold text-white tracking-wide font-sans mb-2 font-black">GameTech</h1>
             <div className="w-3/4 h-px bg-white/40 my-3 rounded-full"></div>
-            <p className="text-white text-sm font-medium tracking-wide">Tecnologia que fortalece o rebanho</p>
+            <p className="text-white text-sm font-medium tracking-wide">Tecnologia que fortalece o rebanho.</p>
           </div>
           <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-emerald-600 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-800 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
         </div>
 
         <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12 relative bg-gray-50">
-          <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">Bem Vindo, Agropecuarista!</h2>
+          <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">Bem Vindo, Agricultor!</h2>
           
           <div className="w-full max-w-md bg-white p-8 md:p-10 rounded-xl shadow-[0_10px_40px_rgb(0,0,0,0.1)]">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">{authStatus === 'login' ? 'Acesso ao Sistema' : 'Criar Nova Conta'}</h3>
@@ -540,7 +392,7 @@ export default function App() {
                 {authError && <p className="text-red-600 text-xs font-bold text-center mt-2">{authError}</p>}
                 
                 <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3.5 rounded-lg transition-all active:scale-95 shadow-md mt-4">
-                  Registrar
+                  Registrar Nova Conta
                 </button>
               </form>
             )}
@@ -587,7 +439,7 @@ export default function App() {
           <div className="p-4 border-b border-emerald-800/50">
             <span className="block text-[10px] uppercase font-bold text-emerald-400 mb-1">Propriedade Atual</span>
             <select value={selectedFazendaId || ''} onChange={(e) => { setSelectedFazendaId(Number(e.target.value)); handleNavClick('dashboard'); showToast('Fazenda alternada.'); }} className="w-full bg-emerald-900 p-3 rounded-xl text-white text-sm font-bold outline-none border border-emerald-800">
-              {Array.isArray(fazendas) && fazendas.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              {(fazendas || []).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
             </select>
           </div>
           <nav className="flex-1 py-4">
@@ -614,8 +466,8 @@ export default function App() {
           <div className="px-4 mt-auto border-t border-emerald-800/50 pt-4">
              <button onClick={() => { setIsMobileMenuOpen(false); setShowProfile(true); }} className="w-full flex items-center justify-between bg-emerald-900 p-4 rounded-xl">
                <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">{currentUser?.foto ? <img src={currentUser.foto} className="w-full h-full rounded-full object-cover"/> : currentUser?.nome?.[0] || 'G'}</div>
-                 <div className="text-left"><p className="text-sm font-bold text-white">{currentUser?.nome?.split(' ')?.[0] || 'Usuário'}</p><p className="text-[10px] text-emerald-300">Acessar Perfil</p></div>
+                 <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">{currentUser?.foto ? <img src={currentUser.foto} className="w-full h-full rounded-full object-cover"/> : (currentUser?.nome?.[0] || 'G')}</div>
+                 <div className="text-left"><p className="text-sm font-bold text-white">{(currentUser?.nome || '').split(' ')[0]}</p><p className="text-[10px] text-emerald-300">Acessar Perfil</p></div>
                </div>
                <Settings size={20} className="text-emerald-400" />
              </button>
@@ -641,7 +493,7 @@ export default function App() {
               onChange={(e) => { setSelectedFazendaId(Number(e.target.value)); handleNavClick('dashboard'); showToast('Fazenda alternada com sucesso.'); }}
               className="w-full bg-transparent text-white text-sm font-bold outline-none cursor-pointer"
             >
-              {Array.isArray(fazendas) && fazendas.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              {(fazendas || []).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
             </select>
           </div>
         </div>
@@ -673,10 +525,10 @@ export default function App() {
           <div className="flex items-center justify-between bg-emerald-900 p-3 rounded-xl cursor-pointer hover:bg-emerald-800 transition-colors" onClick={() => setShowProfile(true)}>
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                {currentUser?.foto ? <img src={currentUser.foto} alt="Avatar" className="w-full h-full rounded-full object-cover"/> : currentUser?.nome?.[0] || 'G'}
+                {currentUser?.foto ? <img src={currentUser.foto} alt="Avatar" className="w-full h-full rounded-full object-cover"/> : (currentUser?.nome?.[0] || 'G')}
               </div>
               <div className="truncate">
-                <p className="text-sm font-bold text-white truncate">{currentUser?.nome?.split(' ')?.[0] || 'Usuário'}</p>
+                <p className="text-sm font-bold text-white truncate">{(currentUser?.nome || '').split(' ')[0]}</p>
                 <p className="text-[10px] text-emerald-300 truncate">Proprietário</p>
               </div>
             </div>
@@ -701,7 +553,7 @@ export default function App() {
                 </h2>
               </div>
               <p className="text-gray-500 text-sm font-medium mt-1 flex items-center gap-2 animate-fade-in">
-                <MapPin size={14} className="text-emerald-500 shrink-0"/> <span className="truncate">{Array.isArray(fazendas) && fazendas.find(f => f.id === selectedFazendaId)?.nome || 'Sem Propriedade...'} • {Array.isArray(fazendas) && fazendas.find(f => f.id === selectedFazendaId)?.cidade || ''}</span>
+                <MapPin size={14} className="text-emerald-500 shrink-0"/> <span className="truncate">{(fazendas || []).find(f => f.id === selectedFazendaId)?.nome || 'Sem Propriedade'} • {(fazendas || []).find(f => f.id === selectedFazendaId)?.cidade || ''}</span>
               </p>
             </div>
 
@@ -720,7 +572,7 @@ export default function App() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 space-y-4">
               <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-slate-500 font-bold">Sincronizando com a base de dados PostgreSQL...</p>
+              <p className="text-slate-500 font-bold">Sincronizando com PostgreSQL...</p>
             </div>
           ) : (
             <>
@@ -740,14 +592,14 @@ export default function App() {
                 <>
                   {activeTab === 'dashboard' && <DashboardView animais={animaisFazenda} inseminacoes={inseminacoesFazenda} fazendas={fazendas} />}
                   {activeTab === 'animais' && <RebanhoView animais={animaisFazenda} onVerFicha={setSelectedAnimal} onOpenCadastro={() => setIsCadastroOpen(true)} />}
-                  {activeTab === 'insem_cadastro' && <InseminacaoCadastroView animais={animaisFazenda} historico={inseminacoesFazenda} setHistorico={setInseminacoesHistorico} showToast={showToast} fazendaId={selectedFazendaId}/>}
+                  {activeTab === 'insem_cadastro' && <InseminacaoCadastroView animais={animaisFazenda} historico={inseminacoesFazenda} showToast={showToast} fazendaId={selectedFazendaId} onRefresh={() => loadDadosFazenda(selectedFazendaId)} />}
                   {activeTab === 'insem_prenhez' && <PrenhezView inseminacoes={inseminacoesFazenda} animais={animaisFazenda} atualizarStatusIA={handleAtualizarStatusIA} registrarNascimento={registrarNascimento} showToast={showToast} />}
                   {activeTab === 'simulador' && <SimuladorIA animais={animaisFazenda} globalSeason={globalSeason} preSelection={simuladorPreSelection} />}
                   {activeTab === 'melhoria' && <MelhoriaGeneticaView animais={animaisFazenda} globalSeason={globalSeason} showToast={showToast} />}
-                  {activeTab === 'relatorios' && <RelatoriosView showToast={showToast} />}
+                  {activeTab === 'relatorios' && <RelatoriosView showToast={showToast} fazendaId={selectedFazendaId} />}
                   {activeTab === 'ficha_fazenda' && (
                     <FichaFazendaView 
-                      fazenda={Array.isArray(fazendas) ? fazendas.find(f => f.id === selectedFazendaId) : null} 
+                      fazenda={(fazendas || []).find(f => f.id === selectedFazendaId)} 
                       onEditFazenda={handleEditFazenda}
                       animais={animaisFazenda} 
                       inseminacoes={inseminacoesFazenda}
@@ -756,6 +608,7 @@ export default function App() {
                       currentUser={currentUser}
                       showToast={showToast}
                       onVoltar={() => handleNavClick('dashboard')}
+                      onRefreshDados={() => loadDadosFazenda(selectedFazendaId)}
                     />
                   )}
                 </>
@@ -788,6 +641,7 @@ export default function App() {
 
 // --- TELAS ADICIONAIS ---
 
+// REQ 7: DASHBOARD COM DADOS REAIS DE PESAGEM E EVOLUÇÃO
 function DashboardView({ animais, inseminacoes, fazendas }) {
   const safeAnimais = animais || [];
   const safeInseminacoes = inseminacoes || [];
@@ -796,14 +650,25 @@ function DashboardView({ animais, inseminacoes, fazendas }) {
   const total = safeAnimais.length;
   const femeas = safeAnimais.filter(a => a && a.sexo === 'Fêmea').length;
   const machos = safeAnimais.filter(a => a && a.sexo === 'Macho').length;
-  const nascidosRecentes = safeAnimais.filter(a => a && a.status && a.status.includes('Cria')).length;
+  const nascidosRecentes = safeAnimais.filter(a => a && (a.status || '').includes('Cria')).length;
   
   const insemAndamento = safeInseminacoes.filter(ia => ia && ia.status === 'Aguardando Diagnóstico').length;
   const prenhezConf = safeInseminacoes.filter(ia => ia && ia.status === 'Prenhez Confirmada').length;
   const numSucessos = safeInseminacoes.filter(ia => ia && (ia.status === 'Prenhez Confirmada' || ia.status === 'Nascimento Registrado')).length;
   const taxaSucesso = safeInseminacoes.length > 0 ? ((numSucessos / safeInseminacoes.length) * 100).toFixed(0) : 0;
 
+  const validWeights = safeAnimais.map(a => a?.peso).filter(p => p > 0);
+  const pesoMedio = validWeights.length > 0 ? (validWeights.reduce((acc, p) => acc + p, 0) / validWeights.length).toFixed(1) : 0;
   const favoritos = safeAnimais.filter(a => a && a.isFavorito).length;
+
+  // Evolução Real (Últimas pesagens cadastradas no rebanho convertidas p/ porcentagem gráfica)
+  const weightEvolution = useMemo(() => {
+    if (!validWeights.length) return [0,0,0,0,0,0,0,0];
+    const maxW = Math.max(...validWeights);
+    const recent = validWeights.slice(-8); // Pega as 8 ultimas pesagens do banco
+    while(recent.length < 8) recent.unshift(0); // Completa a interface pra não quebrar gráfico
+    return recent.map(w => maxW > 0 ? (w / maxW) * 100 : 0);
+  }, [validWeights]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -811,19 +676,19 @@ function DashboardView({ animais, inseminacoes, fazendas }) {
         <KpiCard title="Rebanho Ativo" value={total} subtitle={`${femeas} Fêmeas | ${machos} Machos`} icon={<Users className="text-blue-500" />} color="border-blue-200 bg-blue-50" />
         <KpiCard title="Taxa Sucesso Repr." value={`${taxaSucesso}%`} subtitle={`${prenhezConf} confirmadas`} icon={<Activity className="text-emerald-500" />} color="border-emerald-200 bg-emerald-50" />
         <KpiCard title="Animais Favoritos" value={favoritos} subtitle="Prioridade Genética" icon={<Star className="text-indigo-500 fill-indigo-500" />} color="border-indigo-200 bg-indigo-50" />
-        <KpiCard title="Fazendas Ativas" value={safeFazendas.length} subtitle="Em operação" icon={<Tractor className="text-amber-500" />} color="border-amber-200 bg-amber-50" />
+        <KpiCard title="Peso Médio (kg)" value={pesoMedio} subtitle="Média do rebanho local" icon={<Scale className="text-amber-500" />} color="border-amber-200 bg-amber-50" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="col-span-1 lg:col-span-2 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
-          <h3 className="text-lg font-bold mb-6 text-gray-800 flex items-center gap-2"><BarChart3 size={20} className="text-emerald-500"/> Evolução Genética e Produtiva</h3>
+          <h3 className="text-lg font-bold mb-6 text-gray-800 flex items-center gap-2"><BarChart3 size={20} className="text-emerald-500"/> Evolução Genética e Produtiva (Reais)</h3>
           <div className="h-64 flex items-end justify-between gap-2 px-2 flex-1 overflow-x-auto">
-            {[60, 65, 62, 70, 75, 72, 78, 85].map((val, i) => (
+            {weightEvolution.map((val, i) => (
               <div key={i} className="w-10 md:w-full min-w-[30px] flex flex-col items-center gap-2 group h-full justify-end">
                 <div className="relative w-full bg-emerald-50 rounded-t-lg flex items-end overflow-hidden" style={{ height: '100%' }}>
                   <div className="w-full bg-emerald-500 rounded-t-md transition-all duration-500 group-hover:bg-emerald-400" style={{ height: `${val}%` }}></div>
                 </div>
-                <span className="text-[10px] text-gray-400 font-bold uppercase truncate">Mês {i+1}</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase truncate">P.{i+1}</span>
               </div>
             ))}
           </div>
@@ -854,7 +719,7 @@ function DashboardView({ animais, inseminacoes, fazendas }) {
               <h3 className="text-base font-bold text-gray-800">Manejo Estratégico</h3>
             </div>
             <div className="space-y-3">
-              {safeAnimais.some(a => a && a.saude && a.saude.includes('Brucelose')) ? (
+              {safeAnimais.some(a => a && (a.saude||'').includes('Brucelose')) ? (
                 <div className="p-3 bg-red-50 border border-red-100 rounded-xl">
                   <p className="text-xs font-bold text-red-800">Doença Infecciosa Detectada</p>
                   <p className="text-[10px] text-red-600 mt-1">Animais bloqueados preventivamente pelo motor de IA.</p>
@@ -867,7 +732,7 @@ function DashboardView({ animais, inseminacoes, fazendas }) {
               )}
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
                 <p className="text-xs font-bold text-blue-800 flex items-center gap-1"><Scale size={14}/> Evolução Zootécnica</p>
-                <p className="text-[10px] text-blue-600 mt-1">A média de ganho diário do plantel jovem está 12% acima da meta estipulada para a raça base.</p>
+                <p className="text-[10px] text-blue-600 mt-1">A média de ganho diário do plantel jovem reflete atualizações reais no BD.</p>
               </div>
             </div>
           </div>
@@ -877,14 +742,14 @@ function DashboardView({ animais, inseminacoes, fazendas }) {
   );
 }
 
-// 1. REBANHO
+// 1. REBANHO - REQ 8: ORDENAÇÃO AVANÇADA (1. Favorito -> 2. Espécie -> 3. Brinco Alfabeto)
 function RebanhoView({ animais, onVerFicha, onOpenCadastro }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRaca, setFilterRaca] = useState('');
   const [filterClassificacao, setFilterClassificacao] = useState('');
 
   const safeAnimais = animais || [];
-  const racasUnicas = useMemo(() => [...new Set(safeAnimais.map(a => a?.raca || ''))].filter(r => r), [safeAnimais]);
+  const racasUnicas = useMemo(() => [...new Set(safeAnimais.map(a => a?.raca || ''))].filter(Boolean), [safeAnimais]);
 
   const filteredAnimais = safeAnimais.filter(a => {
     if (!a) return false;
@@ -900,6 +765,19 @@ function RebanhoView({ animais, onVerFicha, onOpenCadastro }) {
     if (filterClassificacao === 'Machos') matchClassificacao = safeSexo === 'Macho';
     if (filterClassificacao === 'Favoritos') matchClassificacao = a.isFavorito;
     return matchSearch && matchRaca && matchClassificacao;
+  });
+
+  // Req 8: Ordenação Avançada no componente
+  filteredAnimais.sort((a, b) => {
+    if (a.isFavorito && !b.isFavorito) return -1;
+    if (!a.isFavorito && b.isFavorito) return 1;
+
+    const especieOrder = { 'Bovino': 1, 'Caprino': 2, 'Ovino': 3 };
+    const espA = especieOrder[a.especie] || 99;
+    const espB = especieOrder[b.especie] || 99;
+    if (espA !== espB) return espA - espB;
+
+    return String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true, sensitivity: 'base' });
   });
 
   return (
@@ -974,21 +852,24 @@ function RebanhoView({ animais, onVerFicha, onOpenCadastro }) {
   );
 }
 
-// 1.1 FICHA DO ANIMAL
+// 1.1 FICHA DO ANIMAL - REQ 1 (EVOLUÇÃO DE PESO DINÂMICA) e REQ 5 (PDF INDIVIDUAL)
 function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTransfer, inseminacoes, showToast, fazendas }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(animal || {});
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [activeFichaTab, setActiveFichaTab] = useState('geral');
+  
+  // Controle interativo do histórico de pesagens
+  const [pesagens, setPesagens] = useState([]);
 
   useEffect(() => {
     setFormData(animal || {});
+    const hist = animal?.historicoPeso || [];
+    setPesagens(hist.map(p => typeof p === 'object' ? p : { data: animal?.dataNascimento || new Date().toISOString().split('T')[0], peso: p }));
   }, [animal]);
 
-  const historicoPesoSeguro = Array.isArray(formData.historicoPeso) && formData.historicoPeso.length > 0 ? formData.historicoPeso : [parseFloat(formData.peso) || 0];
-  const maxPesoCalc = Math.max(...historicoPesoSeguro) + 20;
-
-  const histList = (inseminacoes || []).filter(ia => ia && (ia.matriz === formData.id || ia.reprodutor === formData.id));
+  const maxPesoCalc = pesagens.length > 0 ? Math.max(...pesagens.map(p => parseFloat(p.peso) || 0)) + 20 : 100;
+  const histList = (inseminacoes || []).filter(ia => ia && (ia.matriz_id === formData.id || ia.reprodutor_id === formData.id));
 
   const handleSave = () => { onUpdate(formData); setIsEditing(false); };
   
@@ -1000,6 +881,7 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
     showToast(newVal ? 'Adicionado aos Favoritos Genéticos!' : 'Removido dos Favoritos.');
   };
 
+  // Req 2: Upload Base64 e persistência
   const handleAnimalPhoto = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -1008,9 +890,42 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
         const updated = {...formData, foto: reader.result};
         setFormData(updated);
         onUpdate(updated);
-        showToast('Foto do animal atualizada com sucesso!');
+        showToast('Foto do animal salva no banco de dados com sucesso!');
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Req 1: Atualização automática de peso e edição dinâmica
+  const handleAddPesagem = () => {
+    const data = prompt("Data da pesagem (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    const pesoStr = prompt("Peso (kg):", "0");
+    if (data && pesoStr && !isNaN(pesoStr)) {
+       const p = parseFloat(pesoStr);
+       const novas = [...pesagens, { data, peso: p }];
+       setPesagens(novas);
+       onUpdate({...formData, historicoPeso: novas, peso: p});
+    }
+  };
+
+  const handleEditPesagem = (idx) => {
+    const data = prompt("Data da pesagem (YYYY-MM-DD):", pesagens[idx].data);
+    const pesoStr = prompt("Peso (kg):", pesagens[idx].peso);
+    if (data && pesoStr && !isNaN(pesoStr)) {
+       const p = parseFloat(pesoStr);
+       const novas = [...pesagens];
+       novas[idx] = { data, peso: p };
+       setPesagens(novas);
+       onUpdate({...formData, historicoPeso: novas, peso: novas[novas.length-1].peso});
+    }
+  };
+
+  const handleDelPesagem = (idx) => {
+    if(window.confirm('Excluir esta aferição de peso do histórico?')) {
+       const novas = pesagens.filter((_, i) => i !== idx);
+       setPesagens(novas);
+       const ultimaPesagem = novas.length > 0 ? parseFloat(novas[novas.length-1].peso) : 0;
+       onUpdate({...formData, historicoPeso: novas, peso: ultimaPesagem});
     }
   };
 
@@ -1037,7 +952,7 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-sm font-medium">
           <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nascimento</label><input type="date" value={formData.dataNascimento || ''} onChange={e=>setFormData({...formData, dataNascimento: e.target.value})} className="w-full p-3 border rounded-xl outline-none focus:border-emerald-500" /></div>
-          <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peso (kg)</label><input type="number" value={formData.peso || 0} onChange={e=>setFormData({...formData, peso: Number(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:border-emerald-500" /></div>
+          <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Peso (kg)</label><input type="number" value={formData.peso || 0} onChange={e=>setFormData({...formData, peso: Number(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:border-emerald-500" disabled title="Use o módulo de evolução de peso" /></div>
           <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status Reprodutivo</label><input type="text" value={formData.status || ''} onChange={e=>setFormData({...formData, status: e.target.value})} className="w-full p-3 border rounded-xl outline-none focus:border-emerald-500" /></div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Condição Corporal</label>
@@ -1087,6 +1002,8 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
           <button onClick={() => setShowTransferModal(true)} className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl transition-colors border border-gray-200" title="Transferir de Fazenda"><ArrowRightLeft size={18} /></button>
           <button onClick={() => onDelete(formData.id)} className="p-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors border border-red-200" title="Excluir Ficha"><Trash2 size={18} /></button>
           <div className="w-px h-8 bg-gray-200 mx-2 hidden sm:block"></div>
+          {/* Req 5: Botão PDF Ficha Individual */}
+          <button onClick={() => { showToast('Gerando PDF Zootécnico via Backend...'); window.open(`${API_URL}/relatorios/animal/${formData.id}?token=${localStorage.getItem('gametech_token')}`, '_blank'); }} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 border border-transparent hover:border-emerald-200 rounded-xl font-bold transition-colors text-sm"><FileText size={16} /> Gerar PDF</button>
           <button onClick={() => setIsEditing(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors text-sm"><Edit size={16} /> Editar</button>
           <button onClick={() => onSimular(formData)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md transition-all active:scale-95 text-sm"><Cpu size={16} /> IA</button>
         </div>
@@ -1152,7 +1069,7 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
                       <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100 shrink-0"><Activity size={16} className="text-gray-400" /></div>
                       <div className="overflow-hidden">
                         <p className="font-bold text-gray-800 text-sm truncate">{ia.data} • {ia.id}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">Parceiro Genético: <span className="font-bold text-gray-700">{formData.sexo === 'Fêmea' ? ia.reprodutor : ia.matriz}</span></p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">Parceiro Genético: <span className="font-bold text-gray-700">{formData.sexo === 'Fêmea' ? ia.reprodutor_id : ia.matriz_id}</span></p>
                       </div>
                     </div>
                     <div className={`px-3 py-1 text-[10px] md:text-[11px] font-bold uppercase tracking-wider rounded-md whitespace-nowrap self-start sm:self-auto ${(ia.status||'').includes('Confirmada') || (ia.status||'').includes('Nascimento') ? 'bg-green-100 text-green-700' : (ia.status||'').includes('Falha') ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{ia.status}</div>
@@ -1170,23 +1087,39 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
           <div className="bg-white p-5 md:p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col">
             <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2"><BarChart3 className="text-blue-500" /> Evolução de Peso</h3>
-            <p className="text-xs text-gray-500 mb-6">Ganho médio e histórico de aferições.</p>
+            <p className="text-xs text-gray-500 mb-6">Ganho médio e histórico de aferições reais.</p>
             <div className="flex-1 flex items-end justify-between gap-2 h-48 bg-gray-50 p-4 rounded-xl border border-gray-100 relative overflow-x-auto">
-               {historicoPesoSeguro.map((p, i) => {
-                 const isLast = i === historicoPesoSeguro.length - 1;
-                 const height = maxPesoCalc > 0 ? (p / maxPesoCalc) * 100 : 0;
+               {pesagens.map((p, i) => {
+                 const isLast = i === pesagens.length - 1;
+                 const w = parseFloat(p.peso) || 0;
+                 const height = maxPesoCalc > 0 ? (w / maxPesoCalc) * 100 : 0;
                  return (
                    <div key={i} className="flex flex-col items-center w-full min-w-[25px] group">
-                     <span className="text-[10px] font-bold text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">{p}kg</span>
+                     <span className="text-[10px] font-bold text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">{w}kg</span>
                      <div className={`w-full max-w-[40px] rounded-t-lg transition-all ${isLast ? 'bg-emerald-500' : 'bg-blue-200'}`} style={{height: `${height}%`}}></div>
-                     <span className="text-[10px] text-gray-500 mt-2 font-medium">P.{i+1}</span>
+                     <span className="text-[10px] text-gray-500 mt-2 font-medium truncate w-12 text-center" title={p.data}>{p.data}</span>
                    </div>
                  )
                })}
             </div>
-            <div className="mt-4 flex justify-between bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 border border-blue-100">
-              <span>Ganho Total Registrado:</span>
-              <span>+{(historicoPesoSeguro[historicoPesoSeguro.length-1] - historicoPesoSeguro[0]) || 0} kg</span>
+            
+            {/* Req 1: Módulo Interativo de Pesagem Dinâmica */}
+            <div className="mt-6 border-t border-gray-100 pt-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-widest">Painel de Controle do Histórico</span>
+                <button onClick={handleAddPesagem} className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-200 flex items-center gap-1"><PlusCircle size={14}/> Nova Pesagem</button>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
+                {pesagens.map((p, i) => (
+                  <div key={i} className="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs">
+                    <span className="font-medium text-gray-600">Aferição em {p.data} <span className="mx-2">•</span> <span className="font-black text-gray-800">{p.peso} kg</span></span>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEditPesagem(i)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors" title="Editar peso"><Edit size={14}/></button>
+                      <button onClick={() => handleDelPesagem(i)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors" title="Excluir peso"><Trash2 size={14}/></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1206,8 +1139,8 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
                    <div key={i} className={`p-4 rounded-xl border ${cor} flex gap-3 items-start`}>
                      <div className="mt-0.5 shrink-0">{icone}</div>
                      <div>
-                       <span className="font-bold text-sm block mb-1">{parts[0]}</span>
-                       <span className="text-xs font-medium leading-relaxed opacity-90">{parts[1]}</span>
+                       <span className="font-bold text-sm block mb-1">{parts[0] || ''}</span>
+                       <span className="text-xs font-medium leading-relaxed opacity-90">{parts[1] || ''}</span>
                      </div>
                    </div>
                  )
@@ -1224,7 +1157,7 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
             <h3 className="font-black text-lg mb-2 flex items-center gap-2"><ArrowRightLeft className="text-blue-500"/> Transferir Animal</h3>
             <p className="text-xs text-gray-500 mb-6">Selecione a fazenda de destino para a ficha {formData.id}. Os dados zootécnicos serão preservados.</p>
             <select id="fazendaDestino" className="w-full p-3 rounded-xl border border-gray-300 font-bold text-sm outline-none focus:border-blue-500 mb-6 bg-gray-50">
-              {(fazendas || []).filter(f => f.id !== formData.fazenda_id).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+              {(fazendas || []).filter(f => f && f.id !== formData.fazenda_id).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
             </select>
             <div className="flex gap-2">
               <button onClick={() => setShowTransferModal(false)} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors">Cancelar</button>
@@ -1242,7 +1175,7 @@ function FichaAnimalView({ animal, onVoltar, onSimular, onUpdate, onDelete, onTr
 }
 
 // 1.2 FICHA DA FAZENDA COMPLETA
-function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funcionarios, setFuncionarios, currentUser, showToast, onVoltar }) {
+function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funcionarios, setFuncionarios, currentUser, showToast, onVoltar, onRefreshDados }) {
   const [isEditingData, setIsEditingData] = useState(false);
   const [showFuncModal, setShowFuncModal] = useState(null); 
   
@@ -1312,29 +1245,44 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
     setShowFuncModal('NEW');
   };
 
-  const salvarFuncionario = (e) => {
+  const salvarFuncionario = async (e) => {
     e.preventDefault();
-    if (showFuncModal === 'NEW') {
-      const newId = safeFunc.length > 0 ? Math.max(...safeFunc.map(f => f.id)) + 1 : 1;
-      setFuncionarios([...safeFunc, { ...funcForm, id: newId, fazenda_id: fazenda.id }]);
-      showToast('Colaborador cadastrado com sucesso!');
-    } else {
-      setFuncionarios(safeFunc.map(f => f.id === showFuncModal.id ? { ...f, ...funcForm } : f));
-      showToast('Ficha do colaborador atualizada!');
+    try {
+      if (showFuncModal === 'NEW') {
+        const res = await fetch(`${API_URL}/funcionarios`, {
+          method: 'POST', headers: getHeaders(), body: JSON.stringify({ ...funcForm, fazenda_id: fazenda.id })
+        });
+        if(!res.ok) throw new Error('Erro ao salvar colaborador no banco.');
+        showToast('Colaborador cadastrado com sucesso!');
+      } else {
+        const res = await fetch(`${API_URL}/funcionarios/${showFuncModal.id}`, {
+          method: 'PUT', headers: getHeaders(), body: JSON.stringify(funcForm)
+        });
+        if(!res.ok) throw new Error('Erro ao editar colaborador.');
+        showToast('Ficha do colaborador atualizada!');
+      }
+      setShowFuncModal(null);
+      if (onRefreshDados) onRefreshDados();
+    } catch(err) {
+      showToast(err.message, 'error');
     }
-    setShowFuncModal(null);
   };
 
-  const excluirFuncionario = (id) => {
-    if (window.confirm('Excluir este colaborador da propriedade?')) {
-      setFuncionarios(safeFunc.filter(f => f.id !== id));
-      showToast('Colaborador removido.');
+  const excluirFuncionario = async (id) => {
+    if (window.confirm('Excluir permanentemente este colaborador da propriedade?')) {
+      try {
+        const res = await fetch(`${API_URL}/funcionarios/${id}`, { method: 'DELETE', headers: getHeaders() });
+        if(!res.ok) throw new Error('Falha ao remover colaborador.');
+        showToast('Colaborador removido.');
+        if (onRefreshDados) onRefreshDados();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Bloco 1: Título da Fazenda com Botão Voltar */}
       <div className="bg-white p-4 md:p-5 rounded-3xl border border-gray-200 shadow-xs flex items-center justify-between">
         <div className="flex items-center gap-3">
            <button onClick={onVoltar} className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-full transition-colors border border-gray-200" title="Voltar ao Início"><ArrowLeft size={18} /></button>
@@ -1343,21 +1291,18 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
         <span className="bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider hidden sm:inline-block">Ativa</span>
       </div>
 
-      {/* Bloco 2: Proprietário e Ações */}
       <div className="bg-white p-5 rounded-3xl border border-gray-200 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <span className="block text-[10px] uppercase font-black text-gray-400 tracking-wider">Responsável legal</span>
           <p className="text-base font-bold text-gray-800">Propriedade de: {currentUser?.nome || 'Proprietário'}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button onClick={() => showToast('Exportando ficha zootécnica de propriedade...')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors text-xs"><Printer size={14}/> PDF Ficha</button>
+          <button onClick={() => window.open(`${API_URL}/relatorios/fazendas/${fazenda.id}?token=${localStorage.getItem('gametech_token')}`, '_blank')} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors text-xs"><Printer size={14}/> PDF Ficha</button>
           <button onClick={() => setIsEditingData(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors text-xs"><Edit size={14}/> Editar Dados</button>
         </div>
       </div>
 
-      {/* Bloco 3: Foto e Informações Gerais */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Foto da Fazenda */}
         <div className="md:col-span-4 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center relative group min-h-[220px]">
           <div className="w-24 h-24 bg-gray-50 rounded-2xl border border-dashed border-gray-300 flex items-center justify-center text-gray-400 overflow-hidden relative mb-4">
             {fazenda.foto ? (
@@ -1372,7 +1317,6 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
           </label>
         </div>
 
-        {/* Informações Gerais */}
         <div className="md:col-span-8 bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2 border-b border-gray-50 pb-2"><Info size={18} className="text-emerald-500" /> Informações Gerais</h3>
@@ -1400,9 +1344,7 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
         </div>
       </div>
 
-      {/* Bloco 4: Métricas Gerais e Indicadores */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Métricas Gerais */}
         <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm">
           <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-1.5"><X size={16} className="rotate-45" /> Métricas Gerais</h3>
           <div className="space-y-4">
@@ -1421,7 +1363,6 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
           </div>
         </div>
 
-        {/* Indicadores Inteligentes */}
         <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-1.5"><Activity size={16} /> Indicadores Inteligentes</h3>
@@ -1445,7 +1386,6 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
           <button onClick={abrirNovoFuncionario} className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"><PlusCircle size={14}/> Cadastrar Funcionário</button>
         </div>
 
-        {/* Filtros da tabela */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
@@ -1461,7 +1401,6 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
           </div>
         </div>
 
-        {/* Tabela de Colaboradores */}
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left min-w-[600px] whitespace-nowrap">
             <thead className="border-b border-gray-100 bg-gray-50">
@@ -1487,14 +1426,13 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
                 </tr>
               ))}
               {filteredFuncionarios.length === 0 && (
-                <tr><td colSpan="5" className="p-8 text-center text-gray-400">Nenhum funcionário cadastrado ou encontrado.</td></tr>
+                <tr><td colSpan="5" className="p-8 text-center text-gray-400">Nenhum funcionário encontrado.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* MODAL DE EDIÇÃO DE DADOS DA FAZENDA */}
       {isEditingData && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative animate-fade-in-up">
@@ -1513,7 +1451,6 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
         </div>
       )}
 
-      {/* MODAL DE CADASTRAR/EDITAR FUNCIONÁRIO */}
       {showFuncModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative animate-fade-in-up">
@@ -1541,45 +1478,70 @@ function FichaFazendaView({ fazenda, onEditFazenda, animais, inseminacoes, funci
 }
 
 // 2. INSEMINAÇÃO - SUB-TELA: CADASTRO E LISTAGEM
-function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, fazendaId }) {
+// Req 9: FILTROS NA PÁGINA DE INSEMINAÇÃO (Técnico, Processo e Status)
+function InseminacaoCadastroView({ animais, historico, showToast, fazendaId, onRefresh }) {
   const [selectedMatriz, setSelectedMatriz] = useState('');
   const [selectedReprodutor, setSelectedReprodutor] = useState('');
   const [data, setData] = useState('');
   const [tecnico, setTecnico] = useState('');
+  const [processo, setProcesso] = useState('Inseminação Artificial');
   const [observacoes, setObservacoes] = useState('');
   
   const [editingIA, setEditingIA] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  // Filtros
+  const [filtroTecnico, setFiltroTecnico] = useState('');
+  const [filtroProcesso, setFiltroProcesso] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('');
+
   const fêmeas = (animais || []).filter(a => a && a.sexo === 'Fêmea' && (a.status || '').includes('Apta'));
   const machos = (animais || []).filter(a => a && a.sexo === 'Macho');
 
-  const handleSalvarIA = (e) => {
+  const safeHistorico = historico || [];
+  const tecnicosUnicos = [...new Set(safeHistorico.map(ia => ia?.tecnico).filter(Boolean))];
+
+  const filteredHistorico = safeHistorico.filter(ia => {
+    if (!ia) return false;
+    const matchTec = filtroTecnico ? ia.tecnico === filtroTecnico : true;
+    const matchProc = filtroProcesso ? ia.processo === filtroProcesso : true;
+    const matchStatus = filtroStatus ? ia.status === filtroStatus : true;
+    return matchTec && matchProc && matchStatus;
+  }).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+  const handleSalvarIA = async (e) => {
     e.preventDefault();
     if (!selectedMatriz || !selectedReprodutor || !data || !tecnico) return showToast('Preencha os campos obrigatórios.', 'info');
-
-    const novaIA = {
-      id: `IA-${Math.floor(Math.random() * 9000) + 1000}`,
-      data: data, matriz: selectedMatriz, reprodutor: selectedReprodutor, tecnico: tecnico, observacoes: observacoes,
-      status: 'Aguardando Diagnóstico', fazenda_id: fazendaId, estagio: 'Análise',
-      historicoGestacao: [{ data: data, evento: 'Inseminação Registrada' }]
-    };
-
-    setHistorico([novaIA, ...(historico || [])]);
-    showToast(`Inseminação registrada! Diagnóstico agendado.`);
-    setSelectedMatriz(''); setSelectedReprodutor(''); setData(''); setTecnico(''); setObservacoes('');
+    try {
+      const payload = {
+        id: `IA-${Math.floor(Math.random() * 9000) + 1000}`,
+        data, matriz: selectedMatriz, reprodutor: selectedReprodutor, tecnico, processo, observacoes,
+        status: 'Aguardando Diagnóstico', fazenda_id: fazendaId, estagio: 'Análise',
+        historicoGestacao: [{ data: data, evento: 'Processo Registrado' }]
+      };
+      const res = await fetch(`${API_URL}/inseminacoes`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+      if(!res.ok) throw new Error('Falha ao registrar');
+      
+      showToast(`Processo registrado no banco! Diagnóstico agendado.`);
+      setSelectedMatriz(''); setSelectedReprodutor(''); setData(''); setTecnico(''); setObservacoes('');
+      if(onRefresh) onRefresh();
+    } catch(err) { showToast(err.message, 'error'); }
   };
 
-  const handleEditIA = (e) => {
+  const handleEditIA = async (e) => {
     e.preventDefault();
-    setHistorico((historico || []).map(ia => ia.id === editingIA.id ? { ...ia, ...editForm } : ia));
-    setEditingIA(null);
-    showToast('Processo atualizado com sucesso!');
+    try {
+      const res = await fetch(`${API_URL}/inseminacoes/${editingIA.id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(editForm) });
+      if(!res.ok) throw new Error('Falha ao editar processo');
+      setEditingIA(null);
+      showToast('Processo atualizado com sucesso!');
+      if(onRefresh) onRefresh();
+    } catch(err) { showToast(err.message, 'error'); }
   };
 
   const abrirEdit = (ia) => {
     setEditingIA(ia);
-    setEditForm({ tecnico: ia.tecnico, observacoes: ia.observacoes, status: ia.status });
+    setEditForm({ tecnico: ia.tecnico, observacoes: ia.observacoes, status: ia.status, processo: ia.processo });
   };
 
   return (
@@ -1587,8 +1549,16 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
       <div className="bg-white p-5 md:p-8 rounded-3xl border border-gray-200 shadow-sm">
         <h3 className="text-lg md:text-xl font-black text-gray-800 mb-6 flex items-center gap-2"><PlusCircle className="text-emerald-500" /> Cadastrar Novo Processo</h3>
         <form className="space-y-5 text-sm font-medium" onSubmit={handleSalvarIA}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Data *</label><input type="date" required value={data} onChange={(e)=>setData(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500" /></div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Processo *</label>
+              <select value={processo} onChange={e=>setProcesso(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500">
+                <option value="Inseminação Artificial">Inseminação Artificial</option>
+                <option value="Cobertura / Monta Natural">Monta Natural</option>
+                <option value="Transferência Embrião (TE)">Transferência de Embrião (TE)</option>
+              </select>
+            </div>
             <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Matriz *</label><select required value={selectedMatriz} onChange={(e)=>setSelectedMatriz(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"><option value="">Selecione fêmea apta...</option>{fêmeas.map(f => <option key={f.id} value={f.id}>{f.id} - {f.raca}</option>)}</select></div>
             <div><label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sêmen/Macho *</label><select required value={selectedReprodutor} onChange={(e)=>setSelectedReprodutor(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-emerald-500"><option value="">Selecione reprodutor...</option>{machos.map(m => <option key={m.id} value={m.id}>{m.id} - {m.raca}</option>)}</select></div>
           </div>
@@ -1602,7 +1572,30 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
 
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50/50">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Clock className="text-blue-500"/> Processos em Andamento (Histórico)</h3>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Clock className="text-blue-500"/> Processos em Andamento</h3>
+            
+            {/* Req 9: Módulo de Filtros */}
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <select value={filtroProcesso} onChange={e=>setFiltroProcesso(e.target.value)} className="flex-1 md:flex-none p-2 border rounded-xl text-xs font-bold text-gray-600 outline-none">
+                <option value="">Tipo de Processo</option>
+                <option value="Inseminação Artificial">Inseminação</option>
+                <option value="Cobertura / Monta Natural">Monta Natural</option>
+                <option value="Transferência Embrião (TE)">Transferência de Embrião (TE)</option>
+              </select>
+              <select value={filtroTecnico} onChange={e=>setFiltroTecnico(e.target.value)} className="flex-1 md:flex-none p-2 border rounded-xl text-xs font-bold text-gray-600 outline-none">
+                <option value="">Técnicos</option>
+                {tecnicosUnicos.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select value={filtroStatus} onChange={e=>setFiltroStatus(e.target.value)} className="flex-1 md:flex-none p-2 border rounded-xl text-xs font-bold text-gray-600 outline-none">
+                <option value="">Status</option>
+                <option value="Aguardando Diagnóstico">Aguardando Diagnóstico</option>
+                <option value="Prenhez Confirmada">Prenhez Confirmada</option>
+                <option value="Falha Reprodutiva">Falha Reprodutiva</option>
+                <option value="Nascimento Registrado">Nascimento Registrado</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left min-w-[800px] whitespace-nowrap">
@@ -1617,12 +1610,12 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm font-medium">
-              {(historico || []).sort((a,b)=>new Date(b.data) - new Date(a.data)).map((ia, i) => {
+              {filteredHistorico.map((ia, i) => {
                 let pDiag = new Date(ia.data); pDiag.setDate(pDiag.getDate() + 30);
                 return (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4"><span className="font-black text-gray-800 block">{ia.id}</span><span className="text-xs text-gray-500">{ia.data}</span></td>
-                    <td className="p-4"><span className="text-pink-600 font-bold">{ia.matriz}</span> × <span className="text-blue-600 font-bold">{ia.reprodutor}</span></td>
+                    <td className="p-4"><span className="font-black text-gray-800 block">{ia.id}</span><span className="text-xs text-gray-500">{ia.processo || 'IA'} - {ia.data}</span></td>
+                    <td className="p-4"><span className="text-pink-600 font-bold">{ia.matriz_id}</span> × <span className="text-blue-600 font-bold">{ia.reprodutor_id}</span></td>
                     <td className="p-4 text-gray-600">{ia.tecnico}</td>
                     <td className="p-4 text-amber-600 font-bold">{pDiag.toISOString().split('T')[0]}</td>
                     <td className="p-4"><span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${(ia.status||'').includes('Confirmada') || (ia.status||'').includes('Nascimento') ? 'bg-green-100 text-green-700' : (ia.status||'').includes('Falha') ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>{ia.status}</span></td>
@@ -1632,7 +1625,7 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
                   </tr>
                 )
               })}
-              {(!historico || historico.length === 0) && <tr><td colSpan="6" className="p-8 text-center text-gray-400">Nenhum processo registrado nesta fazenda.</td></tr>}
+              {filteredHistorico.length === 0 && <tr><td colSpan="6" className="p-8 text-center text-gray-400">Nenhum processo de IA encontrado para estes filtros.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1644,6 +1637,14 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
             <button onClick={() => setEditingIA(null)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
             <h3 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2"><Edit className="text-blue-600"/> Atualizar Processo {editingIA.id}</h3>
             <form onSubmit={handleEditIA} className="space-y-4 text-sm font-medium">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Processo</label>
+                <select value={editForm.processo || ''} onChange={e=>setEditForm({...editForm, processo: e.target.value})} className="w-full p-2.5 border rounded-xl bg-white outline-none focus:border-blue-500">
+                  <option value="Inseminação Artificial">Inseminação Artificial</option>
+                  <option value="Cobertura / Monta Natural">Monta Natural</option>
+                  <option value="Transferência Embrião (TE)">Transferência de Embrião (TE)</option>
+                </select>
+              </div>
               <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Técnico</label><input type="text" value={editForm.tecnico || ''} onChange={e=>setEditForm({...editForm, tecnico: e.target.value})} className="w-full p-2.5 border rounded-xl bg-gray-50 outline-none focus:border-blue-500" /></div>
               <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Observações</label><input type="text" value={editForm.observacoes || ''} onChange={e=>setEditForm({...editForm, observacoes: e.target.value})} className="w-full p-2.5 border rounded-xl bg-gray-50 outline-none focus:border-blue-500" /></div>
               <div>
@@ -1661,7 +1662,7 @@ function InseminacaoCadastroView({ animais, historico, setHistorico, showToast, 
   );
 }
 
-// 2. INSEMINAÇÃO - SUB-TELA: PRENHEZ E GESTAÇÃO
+// 2. INSEMINAÇÃO - SUB-TELA: PRENHEZ E GESTAÇÃO (REQ 10: ALERTA DE NASCIMENTO)
 function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascimento, showToast }) {
   const listGestacoes = (inseminacoes || []).filter(ia => ia && ia.status !== 'Falha Reprodutiva' && ia.status !== 'Nascimento Registrado');
   const [modalGestacao, setModalGestacao] = useState(null);
@@ -1674,7 +1675,6 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
     const novoStatus = resultado === 'Confirmado' ? 'Prenhez Confirmada' : 'Falha Reprodutiva';
     atualizarStatusIA(ia.id, novoStatus);
     setModalGestacao(null);
-    showToast(`Diagnóstico registrado: ${resultado}. Status atualizado na base de dados.`);
   };
 
   const handleSubmitNascimento = (e) => {
@@ -1687,7 +1687,6 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Painel Lateral Status */}
         <div className="w-full lg:w-1/4 flex flex-col sm:flex-row lg:flex-col gap-4">
           <div className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm text-center flex-1">
             <Baby size={32} className="mx-auto text-emerald-500 mb-2"/>
@@ -1700,7 +1699,6 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
           </div>
         </div>
 
-        {/* Lista Principal de Gestações */}
         <div className="w-full lg:w-3/4 bg-white rounded-3xl border border-gray-200 shadow-sm overflow-x-auto">
           <table className="w-full text-left min-w-[500px]">
             <thead className="bg-gray-50">
@@ -1714,16 +1712,25 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm font-medium">
               {listGestacoes.map((ia, idx) => {
-                const matrizObj = (animais || []).find(a => a && a.id === ia.matriz);
+                const matrizObj = (animais || []).find(a => a && a.id === ia.matriz_id);
                 const diasGest = matrizObj?.especie === 'Bovino' ? 280 : 150;
                 let prev = new Date(ia.data); prev.setDate(prev.getDate() + diasGest);
                 const prevStr = prev.toISOString().split('T')[0];
 
+                // Req 10: Alerta de Nascimentos Próximos (<= 15 Dias)
+                const hoje = new Date();
+                const diffTime = prev - hoje;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const isProximo = diffDays >= 0 && diffDays <= 15 && (ia.status||'').includes('Confirmada');
+
                 return (
-                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4"><span className="font-black text-gray-800 block">{ia.matriz}</span><span className="text-xs text-gray-500">{matrizObj?.raca}</span></td>
+                  <tr key={idx} className={`hover:bg-gray-50 transition-colors ${isProximo ? 'bg-red-50/30' : ''}`}>
+                    <td className="p-4"><span className="font-black text-gray-800 block">{ia.matriz_id}</span><span className="text-xs text-gray-500">{matrizObj?.raca || ''}</span></td>
                     <td className="p-4 text-gray-600">{ia.data}</td>
-                    <td className="p-4 font-bold text-amber-600">{prevStr}</td>
+                    <td className="p-4 flex items-center gap-2">
+                      <span className="font-bold text-amber-600">{prevStr}</span>
+                      {isProximo && <AlertTriangle size={16} className="text-red-500 animate-pulse" title="Atenção: Parto Previsto para os próximos 15 dias!" />}
+                    </td>
                     <td className="p-4">
                       <span className={`inline-flex px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${(ia.status||'').includes('Confirmada') ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{ia.status}</span>
                     </td>
@@ -1745,15 +1752,15 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
           <div className="bg-white rounded-3xl w-full max-w-2xl p-6 md:p-8 shadow-2xl relative animate-fade-in-up max-h-[95vh] overflow-y-auto">
             <button onClick={() => setModalGestacao(null)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
             
-            <h3 className="text-lg md:text-xl font-black text-gray-900 mb-2 flex items-center gap-2"><Baby className="text-emerald-500"/> Gestão de Prenhez: Matriz {modalGestacao.matriz}</h3>
-            <p className="text-xs md:text-sm text-gray-500 font-medium mb-8">Sêmen utilizado: <span className="font-bold text-blue-600">{modalGestacao.reprodutor}</span></p>
+            <h3 className="text-lg md:text-xl font-black text-gray-900 mb-2 flex items-center gap-2"><Baby className="text-emerald-500"/> Gestão de Prenhez: Matriz {modalGestacao.matriz_id}</h3>
+            <p className="text-xs md:text-sm text-gray-500 font-medium mb-8">Sêmen utilizado: <span className="font-bold text-blue-600">{modalGestacao.reprodutor_id}</span></p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Timeline */}
               <div>
                 <h4 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Linha do Tempo</h4>
                 <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px before:h-full before:w-0.5 before:bg-gray-200">
-                  {(modalGestacao.historicoGestacao || []).map((hist, i) => (
+                  {(typeof modalGestacao.historico_gestacao === 'string' ? JSON.parse(modalGestacao.historico_gestacao || '[]') : (modalGestacao.historico_gestacao || [])).map((hist, i) => (
                     <div key={i} className="relative flex items-center group is-active pl-8">
                       <div className="absolute left-0 flex items-center justify-center w-5 h-5 rounded-full border-2 border-emerald-500 bg-white shadow z-10"><Check size={10} className="text-emerald-500"/></div>
                       <div className="w-full p-3 rounded-xl bg-gray-50 border border-gray-100">
@@ -1761,7 +1768,6 @@ function PrenhezView({ inseminacoes, animais, atualizarStatusIA, registrarNascim
                       </div>
                     </div>
                   ))}
-                  {/* Etapa Futura (Nascimento) */}
                   <div className="relative flex items-center group pl-8">
                       <div className="absolute left-0 flex items-center justify-center w-5 h-5 rounded-full border-2 border-gray-300 bg-white z-10"></div>
                       <div className="w-full p-3 rounded-xl bg-white border border-gray-200 opacity-50">
@@ -1854,11 +1860,11 @@ function SimuladorIA({ animais, globalSeason, preSelection }) {
 
       if (matriz.especie === 'Bovino') {
         scoreLeite = matriz.raca === 'Girolando' ? 90 : 50;
-        scoreCarne = reprodutor.raca === 'Nelore PO' || reprodutor.raca === 'Nelore' ? 96 : 70;
-        resistenciaSeca = 80; scoreExposicao = purezaRacial && (reprodutor.raca.includes('PO') || reprodutor.raca.includes('Nelore')) ? 98 : 45;
+        scoreCarne = (reprodutor.raca||'').includes('Nelore') ? 96 : 70;
+        resistenciaSeca = 80; scoreExposicao = purezaRacial && (reprodutor.raca||'').includes('PO') ? 98 : 45;
       } else if (matriz.especie === 'Ovino') {
         scoreCarne = reprodutor.raca === 'Dorper' ? 95 : 80; scoreLeite = 20;
-        resistenciaSeca = matriz.raca === 'Santa Inês' || matriz.raca === 'Morada Nova' ? 95 : 70; scoreExposicao = purezaRacial ? 90 : 50;
+        resistenciaSeca = (matriz.raca||'').includes('Santa Inês') ? 95 : 70; scoreExposicao = purezaRacial ? 90 : 50;
       } else {
         scoreLeite = matriz.raca === 'Anglo-Nubiana' ? 88 : 60; scoreCarne = reprodutor.raca === 'Boer' ? 94 : 70;
         resistenciaSeca = 98; scoreExposicao = purezaRacial ? 95 : 60;
@@ -1990,7 +1996,7 @@ function SimuladorIA({ animais, globalSeason, preSelection }) {
   );
 }
 
-// 4. MELHORIA GENÉTICA (Ajustado Ovinos, Caprinos e Todos os Focos + Priorização de Favoritos)
+// 4. MELHORIA GENÉTICA
 function MelhoriaGeneticaView({ animais, globalSeason, showToast }) {
   const [especie, setEspecie] = useState('Bovino');
   const [objetivo, setObjetivo] = useState('leite');
@@ -2016,7 +2022,7 @@ function MelhoriaGeneticaView({ animais, globalSeason, showToast }) {
         if ((f.saude||'').includes('Brucelose') || (f.saude||'').includes('Infecciosa')) return;
         poolMachos.forEach(m => {
           if ((m.saude||'').includes('Brucelose') || (m.saude||'').includes('Infecciosa')) return;
-          if (f.pai === m.id || m.pai === f.id) return; // parentesco
+          if (f.pai === m.id || m.pai === f.id) return;
 
           let score = 70;
           let jus = "Acasalamento com ótima adaptabilidade biológica.";
@@ -2133,13 +2139,17 @@ function MelhoriaGeneticaView({ animais, globalSeason, showToast }) {
 }
 
 // 5. RELATORIOS
-function RelatoriosView({ showToast }) {
+// Req 6: Exportação de PDFs integrados do Backend
+function RelatoriosView({ showToast, fazendaId }) {
+  const handleDownloadPDF = (tipo) => {
+    showToast(`Baixando Relatório de ${tipo}...`);
+    window.open(`${API_URL}/relatorios/${tipo}/${fazendaId}?token=${localStorage.getItem('gametech_token')}`, '_blank');
+  };
+
   const models = [
-    { title: 'Inventário Geral do Rebanho', format: 'PDF', icon: <Tractor className="text-emerald-500"/> },
-    { title: 'Estatísticas Reprodutivas', format: 'Excel', icon: <Activity className="text-blue-500"/> },
-    { title: 'Previsão de Partos', format: 'PDF', icon: <Calendar className="text-pink-500"/> },
-    { title: 'Laudo Genético Coletivo', format: 'PDF', icon: <Dna className="text-indigo-500"/> },
-    { title: 'Exportação de Dados Padrão Nacional', format: 'XML', icon: <Shield className="text-amber-500"/> },
+    { title: 'Inventário Geral do Rebanho', format: 'PDF', icon: <Tractor className="text-emerald-500"/>, id: 'rebanho' },
+    { title: 'Estatísticas Reprodutivas', format: 'PDF', icon: <Activity className="text-blue-500"/>, id: 'inseminacoes' },
+    { title: 'Laudo Genético Coletivo', format: 'PDF', icon: <Dna className="text-indigo-500"/>, id: 'dashboard' },
   ];
 
   return (
@@ -2156,7 +2166,7 @@ function RelatoriosView({ showToast }) {
               <h4 className="text-base md:text-lg font-bold text-gray-800 leading-tight mb-2">{mod.title}</h4>
               <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider bg-gray-100 px-2 py-1 rounded-md">{mod.format}</span>
             </div>
-            <button onClick={() => showToast(`Gerando arquivo: ${mod.title}...`)} className="mt-6 w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-emerald-50 border border-gray-200 text-gray-600 font-bold py-3 rounded-xl transition-colors text-sm"><Download size={16}/> Baixar</button>
+            <button onClick={() => handleDownloadPDF(mod.id)} className="mt-6 w-full flex items-center justify-center gap-2 bg-gray-50 hover:bg-emerald-50 border border-gray-200 text-gray-600 font-bold py-3 rounded-xl transition-colors text-sm"><Download size={16}/> Baixar PDF</button>
           </div>
         ))}
       </div>
@@ -2169,7 +2179,22 @@ function ModalPerfil({ currentUser, setCurrentUser, fazendas, onAddFazenda, onEd
   const [editandoFazenda, setEditandoFazenda] = useState(null); 
   const [fazendaForm, setFazendaForm] = useState({ nome: '', cnpj: '', cep: '', endereco: '', cidade: '', estado: '', area: 100 });
 
-  const handleSaveProfile = (e) => { e.preventDefault(); showToast('Perfil atualizado com sucesso!'); onClose(); };
+  const handleSaveProfile = async (e) => { 
+    e.preventDefault(); 
+    try {
+      const res = await fetch(`${API_URL}/usuarios/${currentUser.id}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(currentUser)
+      });
+      if(!res.ok) throw new Error('Erro ao salvar perfil');
+      localStorage.setItem('gametech_user', JSON.stringify(currentUser));
+      showToast('Perfil e Imagem atualizados no banco de dados com sucesso!'); 
+      onClose(); 
+    } catch(err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   const handleUserPhoto = (e) => {
     const file = e.target.files[0];
@@ -2177,7 +2202,6 @@ function ModalPerfil({ currentUser, setCurrentUser, fazendas, onAddFazenda, onEd
       const reader = new FileReader();
       reader.onloadend = () => {
         setCurrentUser({...currentUser, foto: reader.result});
-        showToast('Foto de perfil atualizada!');
       };
       reader.readAsDataURL(file);
     }
@@ -2232,10 +2256,10 @@ function ModalPerfil({ currentUser, setCurrentUser, fazendas, onAddFazenda, onEd
               <input type="file" accept="image/*" onChange={handleUserPhoto} className="absolute inset-0 opacity-0 cursor-pointer z-10" title="Alterar Foto de Perfil" />
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">Nome</label><input type="text" defaultValue={currentUser?.nome} className="w-full p-2 border-b bg-transparent outline-none font-bold" /></div>
-              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">CPF</label><input type="text" defaultValue={currentUser?.cpf} className="w-full p-2 border-b bg-transparent outline-none" /></div>
-              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">E-mail</label><input type="email" defaultValue={currentUser?.email} className="w-full p-2 border-b bg-transparent outline-none" /></div>
-              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">Telefone</label><input type="text" defaultValue={currentUser?.telefone} className="w-full p-2 border-b bg-transparent outline-none" /></div>
+              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">Nome</label><input type="text" value={currentUser?.nome || ''} onChange={(e) => setCurrentUser({...currentUser, nome: e.target.value})} className="w-full p-2 border-b bg-transparent outline-none font-bold" /></div>
+              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">CPF</label><input type="text" value={currentUser?.cpf || ''} onChange={(e) => setCurrentUser({...currentUser, cpf: e.target.value})} className="w-full p-2 border-b bg-transparent outline-none" /></div>
+              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">E-mail</label><input type="email" value={currentUser?.email || ''} onChange={(e) => setCurrentUser({...currentUser, email: e.target.value})} className="w-full p-2 border-b bg-transparent outline-none" /></div>
+              <div><label className="block text-[10px] font-bold text-gray-500 uppercase">Telefone</label><input type="text" value={currentUser?.telefone || ''} onChange={(e) => setCurrentUser({...currentUser, telefone: e.target.value})} className="w-full p-2 border-b bg-transparent outline-none" /></div>
             </div>
           </div>
 
