@@ -10,12 +10,9 @@ const pool = new Pool({
 });
 
 pool.on('connect', () => {
-  console.log('🔗 Conectado ao banco de dados (Gametech)');
+  console.log('🔗 Conectado ao banco de dados PostgreSQL (Gametech)');
 });
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
 };
-
-const db = require('./config/db');
-require('dotenv').config();
