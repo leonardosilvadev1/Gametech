@@ -16,36 +16,9 @@ const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
   database: process.env.DB_NAME || 'gametech_ia_db',
-  password: process.env.DB_PASSWORD || 'leonardo',
+  password: process.env.DB_PASSWORD || 'adm',
   port: process.env.DB_PORT || 5432,
 });
-
-// Auto-Migração e Proteção de Tabela
-const initDB = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id SERIAL PRIMARY KEY, nome VARCHAR(150), email VARCHAR(150) UNIQUE, senha VARCHAR(255), senha_hash VARCHAR(255), cpf VARCHAR(14) UNIQUE, foto TEXT, telefone VARCHAR(20), criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS fazendas (
-      id SERIAL PRIMARY KEY, nome VARCHAR(150), cnpj VARCHAR(20), cep VARCHAR(10), endereco VARCHAR(255), cidade VARCHAR(100), estado VARCHAR(2), area NUMERIC, score INTEGER DEFAULT 90, foto TEXT, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS animais (
-      id VARCHAR(50) PRIMARY KEY, especie VARCHAR(50), raca VARCHAR(100), sexo VARCHAR(10), data_nascimento DATE, peso NUMERIC(6,2), status VARCHAR(50), saude VARCHAR(100), ecc VARCHAR(50), vacinas VARCHAR(100), abortos INTEGER DEFAULT 0, gestacoes INTEGER DEFAULT 0, is_favorito BOOLEAN DEFAULT FALSE, foto TEXT, historico_peso JSONB DEFAULT '[]', fazenda_id INTEGER REFERENCES fazendas(id) ON DELETE CASCADE, pai_id VARCHAR(50), mae_id VARCHAR(50), criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS inseminacoes (
-      id VARCHAR(50) PRIMARY KEY, data DATE, matriz_id VARCHAR(50), reprodutor_id VARCHAR(50), tecnico VARCHAR(150), processo VARCHAR(100) DEFAULT 'Inseminação', observacoes TEXT, status VARCHAR(50), estagio VARCHAR(50), historico_gestacao JSONB DEFAULT '[]', fazenda_id INTEGER REFERENCES fazendas(id) ON DELETE CASCADE
-    );
-    CREATE TABLE IF NOT EXISTS funcionarios (
-      id SERIAL PRIMARY KEY, nome VARCHAR(150), cpf VARCHAR(14), funcao VARCHAR(100), telefone VARCHAR(20), fazenda_id INTEGER REFERENCES fazendas(id) ON DELETE CASCADE
-    );
-  `);
-  
-  // Patch de segurança para adicionar colunas se elas não existirem (sem quebrar tabelas velhas)
-  try { await pool.query(`ALTER TABLE inseminacoes ADD COLUMN processo VARCHAR(100) DEFAULT 'Inseminação';`); } catch (e) {}
-  try { await pool.query(`ALTER TABLE usuarios ADD COLUMN senha_hash VARCHAR(255);`); } catch (e) {}
-  console.log("📦 Tabelas PostgreSQL sincronizadas e operantes.");
-};
-initDB().catch(console.error);
 
 // Middleware
 const authMiddleware = (req, res, next) => {
@@ -69,7 +42,7 @@ app.post('/api/auth/register', async (req, res) => {
     const senhaHash = await bcrypt.hash(senha, salt);
     // Insere com a hash na coluna correta para evitar o erro do Bcrypt no login
     const result = await pool.query(
-      'INSERT INTO usuarios (nome, email, senha, cpf) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, cpf',
+      'INSERT INTO usuarios (nome, email, senha_hash, cpf) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, cpf',
       [nome, email, senhaHash, cpf]
     );
     res.status(201).json({ message: 'Conta criada', user: result.rows[0] });
