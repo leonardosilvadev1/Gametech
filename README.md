@@ -93,17 +93,17 @@ A organização interna do ecossistema do servidor Backend segue a seguinte topo
 gametech-backend/
 │
 ├── config/
-│   └── db.js                
+│   └── db.js
 │
 ├── controllers/
-│   └── apiController.js      
+│   └── apiController.js
 │
 ├── middlewares/
-│   └── auth.js              
+│   └── auth.js
 │
-├── .env                    
-├── package.json             
-├── schema.sql            
+├── .env
+├── package.json
+├── schema.sql
 └── server.js
 
 ---
