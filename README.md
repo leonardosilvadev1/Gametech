@@ -5,7 +5,7 @@ A **Gametech IA** é uma plataforma computacional avançada voltada à pecuária
 ---
 
 ## Todo o código está na branch "master".
-OBS: Leia o arquivo de instalação e banco de dados para garantir pleno funcionamento do sistema.
+OBS: Leia o arquivo de instalação e banco de dados para garantir pleno funcionamento do sistema, também estão na branch "master".
 
 ---
 
