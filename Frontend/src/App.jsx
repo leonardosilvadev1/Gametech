@@ -1495,8 +1495,18 @@ function InseminacaoCadastroView({ animais, historico, showToast, fazendaId, onR
   const [filtroProcesso, setFiltroProcesso] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
 
-  const fêmeas = (animais || []).filter(a => a && a.sexo === 'Fêmea' && (a.status || '').includes('Apta'));
-  const machos = (animais || []).filter(a => a && a.sexo === 'Macho');
+  const fêmeas = (animais || []).filter(a => 
+  a && 
+  a.sexo === 'Fêmea' && 
+  isElegivelAnaliseGenetica(a) && 
+  !(a.status || '').toLowerCase().includes('prenhe')
+);
+
+const machos = (animais || []).filter(a => 
+  a && 
+  a.sexo === 'Macho' && 
+  isElegivelAnaliseGenetica(a)
+);
 
   const safeHistorico = historico || [];
   const tecnicosUnicos = [...new Set(safeHistorico.map(ia => ia?.tecnico).filter(Boolean))];
