@@ -4,6 +4,10 @@ A **Gametech IA** é uma plataforma computacional avançada voltada à pecuária
 
 ---
 
+## Todo o código está na branch "master".
+
+---
+
 ## 🚀 1. Funcionalidades do Sistema
 
 A plataforma possui um ecossistema completo e integrado de controle reprodutivo e zootécnico:
