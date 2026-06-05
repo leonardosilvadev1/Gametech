@@ -90,7 +90,7 @@ O sistema segue o modelo de arquitetura distribuída cliente-servidor:
 A organização interna do ecossistema do servidor Backend segue a seguinte topologia limpa:
 
 ```plaintext
-gametech-backend/
+Backend/
 │
 ├── config/
 │   └── db.js
@@ -113,6 +113,6 @@ gametech-backend/
 
 Este projeto está licenciado sob a **GNU General Public License v3 (GPLv3)**. 
 
-### Isso significa que você tem a liberdade de executar, estudar, compartilhar e modificar o software de forma gratuita. Qualquer trabalho derivado ou cópia deste código fonte também deve ser obrigatoriamente distribuído sob os mesmos termos da licença GPLv3, mantendo o ecossistema open-source protegido e transparente.
+Isso significa que você tem a liberdade de executar, estudar, compartilhar e modificar o software de forma gratuita. Qualquer trabalho derivado ou cópia deste código fonte também deve ser obrigatoriamente distribuído sob os mesmos termos da licença GPLv3, mantendo o ecossistema open-source protegido e transparente.
 
-### Para mais detalhes sobre as permissões e restrições, consulte o arquivo `LICENSE` na raiz do repositório ou acesse a documentação oficial da [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html).
+Para mais detalhes sobre as permissões e restrições, consulte o arquivo `LICENSE` na raiz do repositório ou acesse a documentação oficial da [GNU GPL v3](https://www.gnu.org/licenses/gpl-3.0.html).
