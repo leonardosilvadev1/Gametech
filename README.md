@@ -110,7 +110,7 @@ gametech-backend/
 
 ## 📜 5. Licença
 
-### Este projeto está licenciado sob a **GNU General Public License v3 (GPLv3)**. 
+Este projeto está licenciado sob a **GNU General Public License v3 (GPLv3)**. 
 
 ### Isso significa que você tem a liberdade de executar, estudar, compartilhar e modificar o software de forma gratuita. Qualquer trabalho derivado ou cópia deste código fonte também deve ser obrigatoriamente distribuído sob os mesmos termos da licença GPLv3, mantendo o ecossistema open-source protegido e transparente.
 
